@@ -13,6 +13,11 @@ import 'package:super_tag_editor/widgets/validation_suggestion_item.dart';
 import './tag_editor_layout_delegate.dart';
 import './tag_layout.dart';
 
+enum SuggestionButtonAlign {
+  left,
+  right,
+}
+
 typedef SuggestionBuilder<T> = Widget Function(
     BuildContext context,
     TagsEditorState<T> state,
@@ -65,7 +70,8 @@ class TagEditor<T> extends StatefulWidget {
       this.suggestionsBoxElevation,
       this.suggestionsBoxBackgroundColor,
       this.suggestionsBoxRadius,
-      this.iconSuggestionBox,
+      this.suggestionButtonAlign = SuggestionButtonAlign.left,
+      this.suggestionButton,
       this.searchAllSuggestions,
       this.debounceDuration,
       this.activateSuggestionBox = true,
@@ -170,7 +176,8 @@ class TagEditor<T> extends StatefulWidget {
   final Color? suggestionsBoxBackgroundColor;
   final Color? itemHighlightColor;
   final double? suggestionsBoxRadius;
-  final Widget? iconSuggestionBox;
+  final SuggestionButtonAlign suggestionButtonAlign;
+  final Widget? suggestionButton;
   final Duration? debounceDuration;
   final bool activateSuggestionBox;
   final EdgeInsets? suggestionMargin;
@@ -493,6 +500,14 @@ class TagsEditorState<T> extends State<TagEditor<T>> {
     _suggestionsBoxController?.open();
   }
 
+  void toggleSuggestionBox() async {
+    if (_suggestionsBoxController?.isOpened == true) {
+      closeSuggestionBox();
+    } else {
+      openSuggestionBox();
+    }
+  }
+
   void openSuggestionBox() async {
     if (widget.searchAllSuggestions != null) {
       final localId = ++_searchId;
@@ -548,39 +563,6 @@ class TagsEditorState<T> extends State<TagEditor<T>> {
     _updateValidationSuggestionItem(null);
   }
 
-  /// Shamelessly copied from [InputDecorator]
-  Color _getDefaultIconColor(ThemeData themeData) {
-    if (!widget.enabled) {
-      return themeData.disabledColor;
-    }
-
-    switch (themeData.brightness) {
-      case Brightness.dark:
-        return Colors.white70;
-      case Brightness.light:
-        return Colors.black45;
-    }
-  }
-
-  /// Shamelessly copied from [InputDecorator]
-  Color _getActiveColor(ThemeData themeData) {
-    if (_focusNode.hasFocus) {
-      switch (themeData.brightness) {
-        case Brightness.dark:
-          return themeData.colorScheme.secondary;
-        case Brightness.light:
-          return themeData.primaryColor;
-      }
-    }
-    return themeData.hintColor;
-  }
-
-  Color _getIconColor(ThemeData themeData) {
-    final themeData = Theme.of(context);
-    final activeColor = _getActiveColor(themeData);
-    return _isFocused ? activeColor : _getDefaultIconColor(themeData);
-  }
-
   void _onKeyboardBackspaceListener() async {
     if (_textFieldController.text.isEmpty && widget.length > 0) {
       _countBackspacePressed++;
@@ -606,15 +588,16 @@ class TagsEditorState<T> extends State<TagEditor<T>> {
 
   @override
   Widget build(BuildContext context) {
-    final decoration = widget.hasAddButton && widget.icon == null
+    final decoration = widget.hasAddButton
         ? widget.inputDecoration.copyWith(
             suffixIcon: CupertinoButton(
-            padding: EdgeInsets.zero,
-            onPressed: () {
-              _onTagChanged(_textFieldController.text);
-            },
-            child: const Icon(Icons.add),
-          ))
+              padding: EdgeInsets.zero,
+              onPressed: () {
+                _onTagChanged(_textFieldController.text);
+              },
+              child: Icon(widget.icon ?? Icons.add),
+            ),
+          )
         : widget.inputDecoration;
 
     final tagEditorArea = Container(
@@ -699,33 +682,18 @@ class TagsEditorState<T> extends State<TagEditor<T>> {
 
     Widget? itemChild;
 
-    if (widget.icon == null && widget.iconSuggestionBox == null) {
+    if (widget.suggestionButton == null) {
       itemChild = tagEditorArea;
     } else {
       itemChild = Row(
         children: <Widget>[
-          if (widget.hasAddButton)
-            Container(
-              width: 40,
-              alignment: Alignment.centerLeft,
-              padding: EdgeInsets.zero,
-              child: IconTheme.merge(
-                data: IconThemeData(
-                  color: _getIconColor(Theme.of(context)),
-                  size: 18.0,
-                ),
-                child: Icon(widget.icon),
-              ),
-            ),
-          if (widget.iconSuggestionBox != null)
-            Material(
-                color: Colors.transparent,
-                shape: const CircleBorder(),
-                child: IconButton(
-                    icon: widget.iconSuggestionBox!,
-                    splashRadius: 20,
-                    onPressed: () => openSuggestionBox())),
+          if (widget.suggestionButton != null &&
+              widget.suggestionButtonAlign == SuggestionButtonAlign.left)
+            _provideSuggestionButton(this),
           Expanded(child: tagEditorArea),
+          if (widget.suggestionButton != null &&
+              widget.suggestionButtonAlign == SuggestionButtonAlign.right)
+            _provideSuggestionButton(this),
         ],
       );
     }
@@ -750,4 +718,13 @@ class TagsEditorState<T> extends State<TagEditor<T>> {
       ),
     );
   }
+
+  Widget _provideSuggestionButton(TagsEditorState<T> state) => Material(
+      color: Colors.transparent,
+      shape: const CircleBorder(),
+      child: IconButton(
+        icon: widget.suggestionButton!,
+        splashRadius: 20,
+        onPressed: () => toggleSuggestionBox(),
+      ));
 }

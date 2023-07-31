@@ -79,6 +79,10 @@ class _MyHomePageState extends State<MyHomePage> {
                 delimiters: [',', ' '],
                 hasAddButton: true,
                 resetTextOnSubmitted: true,
+                suggestionButtonAlign: SuggestionButtonAlign.right,
+                suggestionButton: Icon(
+                  Icons.arrow_drop_down,
+                ),
                 // This is set to grey just to illustrate the `textStyle` prop
                 textStyle: const TextStyle(color: Colors.grey),
                 onSubmitted: (outstandingValue) {
@@ -180,6 +184,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   }
                   return [];
                 },
+                searchAllSuggestions: () => Future.value(mockResults),
               ),
               const Divider(),
               // This is just a button to illustrate how to use
